@@ -9,7 +9,9 @@
   },
   "scripts": {
     "process": "node ./scripts/process-wechat.js",
-    "check": "node --check ./lib/extract-core.js && node --check ./lib/article-format.js && node --check ./lib/image-host.js && node --check ./lib/llm.js && node --check ./lib/pipeline.js && node --check ./scripts/process-wechat.js"
+    "check": "node --check ./lib/extract-core.js && node --check ./lib/article-format.js && node --check ./lib/image-host.js && node --check ./lib/llm.js && node --check ./lib/pipeline.js && node --check ./api/process.js && node --check ./docs/app.js && node --check ./scripts/process-wechat.js",
+    "serve:web": "python3 -m http.server 4174 -d docs",
+    "dev:api": "npx vercel dev --listen 4314"
   },
   "keywords": [
     "wechat",

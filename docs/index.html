@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>公众号文章润色台</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --bg-2: #efe4d4;
+        --card: rgba(255, 250, 244, 0.9);
+        --card-strong: rgba(255, 255, 255, 0.95);
+        --ink: #201913;
+        --muted: #6d6255;
+        --accent: #c2582f;
+        --accent-2: #0e6b64;
+        --line: rgba(32, 25, 19, 0.1);
+        --shadow: 0 24px 70px rgba(66, 36, 14, 0.12);
+        --radius-xl: 30px;
+        --radius-lg: 24px;
+        --radius-md: 16px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: Georgia, "Songti SC", "STSong", serif;
+        background:
+          radial-gradient(circle at top left, rgba(194, 88, 47, 0.18), transparent 28%),
+          radial-gradient(circle at right center, rgba(14, 107, 100, 0.14), transparent 24%),
+          linear-gradient(180deg, var(--bg), var(--bg-2));
+      }
+      a { color: inherit; }
+      code {
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
+      .shell {
+        width: min(1200px, calc(100vw - 24px));
+        margin: 18px auto 48px;
+      }
+      .hero, .panel, .section {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--card);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .hero {
+        padding: 28px;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -30px;
+        bottom: -30px;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(194, 88, 47, 0.16), transparent 68%);
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(194, 88, 47, 0.12);
+        color: var(--accent);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 16px 0 10px;
+        font-size: clamp(34px, 5vw, 64px);
+        line-height: 0.98;
+        max-width: 10ch;
+      }
+      .lede {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.75;
+      }
+      .hero-grid, .tool-grid, .content-grid {
+        display: grid;
+        gap: 20px;
+      }
+      .hero-grid {
+        grid-template-columns: 1.15fr 0.85fr;
+        margin-top: 24px;
+      }
+      .tool-grid, .content-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+      }
+      .workspace {
+        margin-top: 24px;
+        display: grid;
+        gap: 22px;
+      }
+      .panel, .section { padding: 22px; }
+      h2 {
+        margin: 0 0 14px;
+        font-size: 24px;
+      }
+      p { line-height: 1.72; }
+      .muted { color: var(--muted); }
+      .form-row {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .label { color: var(--muted); font-size: 14px; }
+      .input, .textarea {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        font: inherit;
+      }
+      .textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+      .button-row, .chip-row, .meta, .stats {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .button-row, .chip-row { margin-top: 16px; }
+      .button, .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 12px 16px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        font: inherit;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+      }
+      .button:hover, .chip:hover { transform: translateY(-1px); }
+      .button.primary {
+        background: var(--accent);
+        color: #fff7f2;
+        box-shadow: 0 14px 30px rgba(194, 88, 47, 0.22);
+      }
+      .button.secondary {
+        background: rgba(255, 255, 255, 0.74);
+        border-color: var(--line);
+      }
+      .button.accent-2 {
+        background: var(--accent-2);
+        color: #edfffb;
+      }
+      .chip {
+        background: rgba(255, 255, 255, 0.7);
+        border-color: var(--line);
+        color: var(--muted);
+      }
+      .chip.active {
+        border-color: rgba(194, 88, 47, 0.18);
+        background: rgba(194, 88, 47, 0.12);
+        color: var(--accent);
+      }
+      .status {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--line);
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.64);
+      }
+      .status.success {
+        border-style: solid;
+        color: #1f5c52;
+        background: rgba(234, 249, 245, 0.92);
+      }
+      .status.error {
+        border-style: solid;
+        color: #8c2d1f;
+        background: rgba(255, 237, 232, 0.92);
+      }
+      .meta, .stats {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .meta li, .stats li {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--card-strong);
+        padding: 18px;
+      }
+      .card + .card { margin-top: 14px; }
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+      .markdown-box {
+        min-height: 280px;
+        max-height: 620px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+        line-height: 1.7;
+        font-size: 14px;
+        color: #2b2520;
+      }
+      .image-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .image-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .image-card img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        background: #f2ece4;
+        display: block;
+      }
+      .image-card .body {
+        padding: 12px;
+        display: grid;
+        gap: 8px;
+      }
+      .image-card .title {
+        color: var(--muted);
+        font-size: 14px;
+        word-break: break-all;
+      }
+      .empty {
+        padding: 18px;
+        border-radius: var(--radius-md);
+        border: 1px dashed var(--line);
+        color: var(--muted);
+      }
+      @media (max-width: 960px) {
+        .hero-grid, .tool-grid, .content-grid { grid-template-columns: 1fr; }
+        .image-list { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <span class="eyebrow">WeChat Article Polisher</span>
+        <h1>公众号文章润色台</h1>
+        <p class="lede">
+          输入一条 <code>mp.weixin.qq.com</code> 文章链接，这个页面会调用本地 API，自动完成
+          <strong>提取正文</strong>、<strong>下载图片</strong>、<strong>上传图床</strong>、<strong>按提示词润色成 Markdown</strong>。
+        </p>
+        <div class="hero-grid">
+          <section class="panel">
+            <h2>当前能力</h2>
+            <p class="muted">默认链路就是你刚刚定下来的流程：公众号链接 -> 图床替换 -> AI 润色成稿。网页会直接展示最终 Markdown，也能下载本地文件。</p>
+            <div class="chip-row">
+              <span class="chip active">自动提取</span>
+              <span class="chip active">自动上传图床</span>
+              <span class="chip active">自动润色</span>
+              <span class="chip">本地优先</span>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>启动方式</h2>
+            <p class="muted">
+              网页默认调用本地开发 API。静态页面建议跑在 <code>4174</code>，API 建议跑在 <code>4314</code>。
+              也可以通过 URL 参数 <code>?api=http://localhost:4314</code> 自定义后端地址。
+            </p>
+            <div class="muted" id="api-note"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <section class="section">
+          <div class="tool-grid">
+            <div>
+              <h2>文章入口</h2>
+              <div class="form-row">
+                <label class="label" for="url-input">公众号文章链接</label>
+                <input id="url-input" class="input" type="url" placeholder="https://mp.weixin.qq.com/s/..." />
+              </div>
+              <div class="form-row">
+                <label class="label" for="prompt-input">润色提示词</label>
+                <textarea id="prompt-input" class="textarea"></textarea>
+              </div>
+              <div class="button-row">
+                <button id="run-button" class="button primary" type="button">开始处理</button>
+                <button id="download-polished" class="button accent-2" type="button">下载润色稿</button>
+                <button id="download-hosted" class="button secondary" type="button">下载图床版 Markdown</button>
+              </div>
+              <div class="status" id="status-box">页面已准备好。先确认 `.env` 里的图床和 LLM 配置已经填好。</div>
+            </div>
+            <div>
+              <h2>结果概览</h2>
+              <ul class="meta" id="article-meta"></ul>
+              <div style="height: 12px"></div>
+              <ul class="stats" id="article-stats"></ul>
+              <div class="card" style="margin-top: 16px;">
+                <h3>处理说明</h3>
+                <p class="muted">如果图床或模型没有配置，API 会返回警告；网页仍会尽量展示已完成的部分，例如原始 Markdown 或图床版 Markdown。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section content-grid">
+          <div>
+            <h2 id="article-title">等待输入文章链接</h2>
+            <div class="card">
+              <h3>润色后的 Markdown</h3>
+              <div id="polished-box" class="markdown-box empty">处理完成后，这里会显示最终成稿。</div>
+            </div>
+            <div class="card">
+              <h3>图床替换版 Markdown</h3>
+              <div id="hosted-box" class="markdown-box empty">如果图片已上传图床，这里会显示替换后的 Markdown。</div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3>原始文章摘要</h3>
+              <div id="summary-box" class="muted">这里会显示标题、摘要和警告。</div>
+            </div>
+            <div class="card">
+              <h3>已上传图片</h3>
+              <div id="image-list" class="image-list"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

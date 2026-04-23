@@ -39,6 +39,37 @@ cp .env.example .env
 node ./scripts/process-wechat.js "https://mp.weixin.qq.com/s/你的文章ID"
 ```
 
+## 网页前端模式
+
+如果你想要一个“输入链接 -> 直接出成稿”的本地网页：
+
+```bash
+npm run dev:api
+```
+
+另开一个终端：
+
+```bash
+npm run serve:web
+```
+
+然后打开：
+
+```text
+http://localhost:4174
+```
+
+默认情况下：
+
+- 网页前端运行在 `http://localhost:4174`
+- API 运行在 `http://localhost:4314`
+
+如果你的 API 不是这个地址，可以在页面 URL 上手动传：
+
+```text
+http://localhost:4174/?api=http://localhost:4314
+```
+
 ## 环境变量
 
 ### 1) OpenAI 兼容模型
@@ -131,6 +162,23 @@ node ./scripts/process-wechat.js "https://mp.weixin.qq.com/s/xxx" \
 - `--skip-upload`：跳过图床上传，只下载图片
 - `--skip-polish`：跳过润色，只做提取 + 下载 + 图床上传
 - `--prompt`：覆盖默认润色提示词
+
+## 网页会返回什么
+
+网页模式调用 `POST /api/process`，会返回：
+
+- 提取到的文章元数据
+- 原始 Markdown
+- 图床替换后的 Markdown
+- 润色后的最终 Markdown
+- 图片上传结果和警告信息
+
+因此网页端可以直接：
+
+- 展示最终成稿
+- 展示图床后的 Markdown
+- 预览已上传图片
+- 一键下载 Markdown 文件
 
 ## 工作流说明
 
