@@ -3,5 +3,23 @@
     "api/process.js": {
       "maxDuration": 300
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/app.js",
+      "destination": "/docs/app.js"
+    },
+    {
+      "source": "/config.js",
+      "destination": "/docs/config.js"
+    },
+    {
+      "source": "/favicon.svg",
+      "destination": "/docs/favicon.svg"
+    }
+  ]
 }

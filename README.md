@@ -43,8 +43,9 @@ node ./scripts/process-wechat.js "https://mp.weixin.qq.com/s/你的文章ID"
 
 线上地址：
 
-- GitHub Pages：`https://xianyu110.github.io/wechat-article-polisher/`
-- Vercel API：`https://wechat-article-polisher.vercel.app/api/process`
+- 推荐入口（Vercel 单站点）：`https://wechat-article-polisher.vercel.app/`
+- API：`https://wechat-article-polisher.vercel.app/api/process`
+- GitHub Pages 仍可访问，但建议优先使用 Vercel 单站点，前端和 API 同域更稳定
 
 注意：线上 API 只有在 Vercel 项目里配置好 `LLM_*` 和 `IMAGE_HOST_*` 环境变量后，才会完整执行“图床上传 + 润色”。如果没配环境变量，页面仍可打开，但处理结果会返回对应警告。
 
