@@ -1,0 +1,26 @@
+{
+  "name": "wechat-article-polisher",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Extract WeChat articles, download images, upload them to a custom image host, and polish the article with an OpenAI-compatible model.",
+  "bin": {
+    "wechat-article-polisher": "./scripts/process-wechat.js"
+  },
+  "scripts": {
+    "process": "node ./scripts/process-wechat.js",
+    "check": "node --check ./lib/extract-core.js && node --check ./lib/article-format.js && node --check ./lib/image-host.js && node --check ./lib/llm.js && node --check ./lib/pipeline.js && node --check ./scripts/process-wechat.js"
+  },
+  "keywords": [
+    "wechat",
+    "weixin",
+    "mp.weixin.qq.com",
+    "image-host",
+    "article-polish"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "playwright": "^1.55.1"
+  }
+}
