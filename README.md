@@ -62,6 +62,7 @@ IMAGE_HOST_FILE_FIELD=file
 IMAGE_HOST_HEADERS_JSON={"Authorization":"Bearer YOUR_TOKEN"}
 IMAGE_HOST_FORM_FIELDS_JSON={"album":"wechat"}
 IMAGE_HOST_RESPONSE_URL_PATH=data.url
+IMAGE_HOST_URL_PREFIX=
 ```
 
 含义：
@@ -71,12 +72,50 @@ IMAGE_HOST_RESPONSE_URL_PATH=data.url
 - `IMAGE_HOST_HEADERS_JSON`：额外请求头，JSON 格式
 - `IMAGE_HOST_FORM_FIELDS_JSON`：额外表单字段，JSON 格式
 - `IMAGE_HOST_RESPONSE_URL_PATH`：上传成功后，图片 URL 在响应 JSON 里的路径，例如 `data.url`
+- `IMAGE_HOST_URL_PREFIX`：如果接口返回的是相对路径，就自动拼接这个前缀
 
 如果你的图床返回里还带业务成功标记，可以再加：
 
 ```env
 IMAGE_HOST_SUCCESS_PATH=success
 IMAGE_HOST_SUCCESS_VALUE=true
+```
+
+### 2.1) 你当前这套 PicGo 自定义 Web 图床
+
+按你截图里的配置，这个仓库可以直接这样写 `.env`：
+
+```env
+IMAGE_HOST_UPLOAD_URL=https://upload.maynor1024.live/upload
+IMAGE_HOST_METHOD=POST
+IMAGE_HOST_FILE_FIELD=file
+IMAGE_HOST_HEADERS_JSON={}
+IMAGE_HOST_FORM_FIELDS_JSON={}
+IMAGE_HOST_RESPONSE_URL_PATH=0.src
+IMAGE_HOST_URL_PREFIX=https://upload.maynor1024.live
+```
+
+对应关系是：
+
+- API 地址：`https://upload.maynor1024.live/upload`
+- POST 参数名：`file`
+- JSON 路径：`0.src`
+- 图片 URL 前缀：`https://upload.maynor1024.live`
+
+也就是说，如果接口返回的是：
+
+```json
+[
+  {
+    "src": "/uploads/2026/04/demo.jpg"
+  }
+]
+```
+
+仓库会自动把它变成：
+
+```text
+https://upload.maynor1024.live/uploads/2026/04/demo.jpg
 ```
 
 ## 命令行选项
