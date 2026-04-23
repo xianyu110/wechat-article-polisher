@@ -1,9 +1,13 @@
 const defaultPrompt = '帮我润色一下，重点字加粗，图片不要省略，重点字加粗，可列表格';
+const historyKey = 'wechat-article-polisher-history-v1';
+const maxHistoryItems = 12;
 
 const state = {
   result: null,
   polishedBlobUrl: '',
   hostedBlobUrl: '',
+  htmlBlobUrl: '',
+  history: [],
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -31,6 +35,7 @@ const getSearch = () => new URLSearchParams(window.location.search);
 const getApiBase = () => {
   const queryApi = getSearch().get('api');
   if (queryApi) return normalizeUrl(queryApi).replace(/\/$/, '');
+  if (window.WECHAT_POLISH_API_BASE) return String(window.WECHAT_POLISH_API_BASE).replace(/\/$/, '');
   if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
     return `${window.location.origin}`.replace(/4174$/, '4314');
   }
@@ -48,14 +53,16 @@ const setStatus = (message, type = '') => {
 const setApiNote = () => {
   $('#api-note').innerHTML = apiBase
     ? `当前 API：<code>${escapeHtml(apiBase)}</code>`
-    : '当前页面未自动发现 API，请在 URL 上添加 `?api=http://localhost:4314`。';
+    : '当前页面未自动发现 API，请在 URL 上添加 `?api=https://你的-api-域名`。';
 };
 
 const revokeDownloads = () => {
   if (state.polishedBlobUrl) URL.revokeObjectURL(state.polishedBlobUrl);
   if (state.hostedBlobUrl) URL.revokeObjectURL(state.hostedBlobUrl);
+  if (state.htmlBlobUrl) URL.revokeObjectURL(state.htmlBlobUrl);
   state.polishedBlobUrl = '';
   state.hostedBlobUrl = '';
+  state.htmlBlobUrl = '';
 };
 
 const makeDownload = (content, type) => {
@@ -70,6 +77,209 @@ const fetchJson = async (url, options) => {
     throw new Error(payload.error || `请求失败：HTTP ${response.status}`);
   }
   return payload;
+};
+
+const applyInlineMarkdown = (text) => {
+  let value = escapeHtml(text || '');
+  value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:16px;margin:14px 0;display:block;" />');
+  value = value.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  value = value.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  value = value.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return value;
+};
+
+const markdownToHtml = (markdown = '') => {
+  const lines = String(markdown).replace(/\r/g, '').split('\n');
+  const html = [];
+  let inUl = false;
+  let inOl = false;
+  let paragraph = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    html.push(`<p>${applyInlineMarkdown(paragraph.join('<br />'))}</p>`);
+    paragraph = [];
+  };
+
+  const closeLists = () => {
+    if (inUl) {
+      html.push('</ul>');
+      inUl = false;
+    }
+    if (inOl) {
+      html.push('</ol>');
+      inOl = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      closeLists();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    if (heading) {
+      flushParagraph();
+      closeLists();
+      const level = heading[1].length;
+      html.push(`<h${level}>${applyInlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const ul = line.match(/^[-*]\s+(.*)$/);
+    if (ul) {
+      flushParagraph();
+      if (inOl) {
+        html.push('</ol>');
+        inOl = false;
+      }
+      if (!inUl) {
+        html.push('<ul>');
+        inUl = true;
+      }
+      html.push(`<li>${applyInlineMarkdown(ul[1])}</li>`);
+      continue;
+    }
+
+    const ol = line.match(/^\d+\.\s+(.*)$/);
+    if (ol) {
+      flushParagraph();
+      if (inUl) {
+        html.push('</ul>');
+        inUl = false;
+      }
+      if (!inOl) {
+        html.push('<ol>');
+        inOl = true;
+      }
+      html.push(`<li>${applyInlineMarkdown(ol[1])}</li>`);
+      continue;
+    }
+
+    closeLists();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  closeLists();
+  return html.join('\n');
+};
+
+const buildHtmlDocument = (title, markdown) => `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title || 'article')}</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f0e8;
+        color: #211913;
+        font-family: Georgia, "Songti SC", "STSong", serif;
+      }
+      main {
+        width: min(860px, calc(100vw - 32px));
+        margin: 24px auto 48px;
+        padding: 32px;
+        background: #fffdf9;
+        border: 1px solid rgba(33, 25, 19, 0.08);
+        border-radius: 28px;
+        box-shadow: 0 24px 80px rgba(66, 36, 14, 0.08);
+      }
+      h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
+      p, li { line-height: 1.85; font-size: 17px; }
+      ul, ol { padding-left: 24px; }
+      a { color: #0d6d64; }
+      code {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: #f2ece4;
+      }
+      img {
+        max-width: 100%;
+        border-radius: 16px;
+        margin: 14px 0;
+        display: block;
+      }
+      strong { color: #ad431d; }
+    </style>
+  </head>
+  <body>
+    <main>
+${markdownToHtml(markdown)}
+    </main>
+  </body>
+</html>
+`;
+
+const readHistory = () => {
+  try {
+    const raw = window.localStorage.getItem(historyKey);
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeHistory = () => {
+  window.localStorage.setItem(historyKey, JSON.stringify(state.history.slice(0, maxHistoryItems)));
+};
+
+const renderHistory = () => {
+  const container = $('#history-list');
+  if (!state.history.length) {
+    container.innerHTML = '<div class="empty">还没有历史任务。每次处理成功后会自动记录到本地浏览器。</div>';
+    return;
+  }
+
+  container.innerHTML = state.history
+    .map(
+      (item, index) => `
+        <article class="history-card">
+          <div>
+            <div class="history-title">${escapeHtml(item.articleTitle || item.url || `任务 ${index + 1}`)}</div>
+            <div class="history-meta">${escapeHtml(item.url || '')}</div>
+            <div class="history-meta">${escapeHtml(item.timeLabel || '')}</div>
+          </div>
+          <div class="button-row compact-row">
+            <button class="button secondary history-load" data-index="${index}" type="button">载入结果</button>
+            <a class="button secondary" href="${escapeHtml(item.url || '#')}" target="_blank" rel="noreferrer">打开原文</a>
+          </div>
+        </article>
+      `,
+    )
+    .join('');
+
+  container.querySelectorAll('.history-load').forEach((button) => {
+    button.addEventListener('click', () => {
+      const item = state.history[Number(button.dataset.index)];
+      if (!item) return;
+      $('#url-input').value = item.url || '';
+      $('#prompt-input').value = item.prompt || defaultPrompt;
+      renderResult(item.payload || {});
+      setStatus('已从历史任务载入结果。', 'success');
+    });
+  });
+};
+
+const saveHistoryItem = (payload, url, prompt) => {
+  const article = payload.article || {};
+  const item = {
+    url,
+    prompt,
+    articleTitle: article.title || '',
+    time: new Date().toISOString(),
+    timeLabel: new Date().toLocaleString('zh-CN'),
+    payload,
+  };
+  state.history = [item, ...state.history.filter((entry) => entry.url !== url)].slice(0, maxHistoryItems);
+  writeHistory();
+  renderHistory();
 };
 
 const renderImages = (images = []) => {
@@ -104,9 +314,11 @@ const renderResult = (payload) => {
   const warnings = payload.warnings || [];
   const polishedMarkdown = payload.polished_markdown || '';
   const hostedMarkdown = payload.hosted_markdown || '';
+  const effectiveMarkdown = polishedMarkdown || hostedMarkdown || payload.raw_markdown || '';
 
   state.polishedBlobUrl = makeDownload(polishedMarkdown, 'text/markdown;charset=utf-8');
   state.hostedBlobUrl = makeDownload(hostedMarkdown, 'text/markdown;charset=utf-8');
+  state.htmlBlobUrl = makeDownload(buildHtmlDocument(article.title || 'article', effectiveMarkdown), 'text/html;charset=utf-8');
 
   $('#article-title').textContent = article.title || '未命名文章';
   $('#article-meta').innerHTML = [
@@ -146,6 +358,16 @@ const triggerDownload = (blobUrl, filename) => {
   link.remove();
 };
 
+const copyPolished = async () => {
+  const content = state.result?.polished_markdown || state.result?.hosted_markdown || state.result?.raw_markdown || '';
+  if (!content) {
+    setStatus('当前没有可复制的成稿内容。', 'error');
+    return;
+  }
+  await navigator.clipboard.writeText(content);
+  setStatus('成稿 Markdown 已复制到剪贴板。', 'success');
+};
+
 const runProcess = async () => {
   const url = normalizeUrl($('#url-input').value);
   const prompt = $('#prompt-input').value.trim() || defaultPrompt;
@@ -162,6 +384,11 @@ const runProcess = async () => {
     throw new Error(payload.error || '处理失败。');
   }
   renderResult(payload.data);
+  saveHistoryItem(payload.data, url, prompt);
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('url', url);
+  if (getSearch().get('api')) nextUrl.searchParams.set('api', getSearch().get('api'));
+  window.history.replaceState({}, '', nextUrl);
   setStatus('处理完成，页面已展示最终结果。', 'success');
 };
 
@@ -180,9 +407,28 @@ const bindEvents = () => {
   $('#download-hosted').addEventListener('click', () => {
     triggerDownload(state.hostedBlobUrl, 'article.hosted-images.md');
   });
+  $('#copy-polished').addEventListener('click', async () => {
+    try {
+      await copyPolished();
+    } catch (error) {
+      setStatus(error.message || String(error), 'error');
+    }
+  });
+  $('#download-html').addEventListener('click', () => {
+    triggerDownload(state.htmlBlobUrl, 'article.html');
+  });
 };
 
+const initFromSearch = async () => {
+  const url = getSearch().get('url');
+  if (!url) return;
+  $('#url-input').value = url;
+};
+
+state.history = readHistory();
 bindEvents();
 setApiNote();
 renderImages();
+renderHistory();
+initFromSearch();
 window.addEventListener('beforeunload', revokeDownloads);

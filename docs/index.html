@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <title>公众号文章润色台</title>
     <style>
       :root {
@@ -208,6 +209,18 @@
         padding: 18px;
       }
       .card + .card { margin-top: 14px; }
+      .compact-row { margin-top: 10px; }
+      .history-list { display: grid; gap: 12px; }
+      .history-card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.78);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+      }
+      .history-title { font-size: 16px; font-weight: 700; }
+      .history-meta { color: var(--muted); font-size: 13px; word-break: break-all; }
       .card h3 {
         margin: 0 0 10px;
         font-size: 18px;
@@ -268,7 +281,7 @@
         <span class="eyebrow">WeChat Article Polisher</span>
         <h1>公众号文章润色台</h1>
         <p class="lede">
-          输入一条 <code>mp.weixin.qq.com</code> 文章链接，这个页面会调用本地 API，自动完成
+          输入一条 <code>mp.weixin.qq.com</code> 文章链接，这个页面会调用在线 API，自动完成
           <strong>提取正文</strong>、<strong>下载图片</strong>、<strong>上传图床</strong>、<strong>按提示词润色成 Markdown</strong>。
         </p>
         <div class="hero-grid">
@@ -285,8 +298,8 @@
           <section class="panel">
             <h2>启动方式</h2>
             <p class="muted">
-              网页默认调用本地开发 API。静态页面建议跑在 <code>4174</code>，API 建议跑在 <code>4314</code>。
-              也可以通过 URL 参数 <code>?api=http://localhost:4314</code> 自定义后端地址。
+              线上版本默认调用部署后的 API；本地开发时，静态页面建议跑在 <code>4174</code>，API 建议跑在 <code>4314</code>。
+              也可以通过 URL 参数 <code>?api=https://你的-api-域名</code> 自定义后端地址。
             </p>
             <div class="muted" id="api-note"></div>
           </section>
@@ -311,6 +324,10 @@
                 <button id="download-polished" class="button accent-2" type="button">下载润色稿</button>
                 <button id="download-hosted" class="button secondary" type="button">下载图床版 Markdown</button>
               </div>
+              <div class="button-row">
+                <button id="copy-polished" class="button secondary" type="button">一键复制成稿</button>
+                <button id="download-html" class="button secondary" type="button">导出 HTML</button>
+              </div>
               <div class="status" id="status-box">页面已准备好。先确认 `.env` 里的图床和 LLM 配置已经填好。</div>
             </div>
             <div>
@@ -324,6 +341,11 @@
               </div>
             </div>
           </div>
+        </section>
+
+        <section class="section">
+          <h2>历史任务</h2>
+          <div id="history-list" class="history-list"></div>
         </section>
 
         <section class="section content-grid">
@@ -352,6 +374,7 @@
       </section>
     </main>
 
+    <script src="./config.js"></script>
     <script type="module" src="./app.js"></script>
   </body>
 </html>
