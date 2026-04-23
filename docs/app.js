@@ -1,6 +1,21 @@
 const defaultPrompt = '帮我润色一下，重点字加粗，图片不要省略，重点字加粗，可列表格';
 const historyKey = 'wechat-article-polisher-history-v1';
+const settingsKey = 'wechat-article-polisher-settings-v1';
 const maxHistoryItems = 12;
+
+const defaultSettings = {
+  apiBase: '',
+  llmBaseUrl: '',
+  llmModel: '',
+  llmSystemPrompt: '',
+  imageUploadUrl: '',
+  imageMethod: 'POST',
+  imageField: 'file',
+  imageResponsePath: '0.src',
+  imageUrlPrefix: '',
+  imageHeaders: '{}',
+  imageFormFields: '{}',
+};
 
 const state = {
   result: null,
@@ -8,6 +23,7 @@ const state = {
   hostedBlobUrl: '',
   htmlBlobUrl: '',
   history: [],
+  settings: { ...defaultSettings },
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -32,17 +48,26 @@ const normalizeUrl = (value = '') => {
 
 const getSearch = () => new URLSearchParams(window.location.search);
 
+const readSettings = () => {
+  try {
+    const raw = window.localStorage.getItem(settingsKey);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return { ...defaultSettings, ...(parsed || {}) };
+  } catch {
+    return { ...defaultSettings };
+  }
+};
+
 const getApiBase = () => {
   const queryApi = getSearch().get('api');
   if (queryApi) return normalizeUrl(queryApi).replace(/\/$/, '');
+  if (state.settings.apiBase) return normalizeUrl(state.settings.apiBase).replace(/\/$/, '');
   if (window.WECHAT_POLISH_API_BASE) return String(window.WECHAT_POLISH_API_BASE).replace(/\/$/, '');
   if (window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')) {
     return `${window.location.origin}`.replace(/4174$/, '4314');
   }
   return '';
 };
-
-const apiBase = getApiBase();
 
 const setStatus = (message, type = '') => {
   const node = $('#status-box');
@@ -51,9 +76,10 @@ const setStatus = (message, type = '') => {
 };
 
 const setApiNote = () => {
+  const apiBase = getApiBase();
   $('#api-note').innerHTML = apiBase
     ? `当前 API：<code>${escapeHtml(apiBase)}</code>`
-    : '当前页面未自动发现 API，请在 URL 上添加 `?api=https://你的-api-域名`。';
+    : '当前页面未自动发现 API，请在前端配置里填写，或在 URL 上添加 `?api=https://你的-api-域名`。';
 };
 
 const revokeDownloads = () => {
@@ -175,36 +201,14 @@ const buildHtmlDocument = (title, markdown) => `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title || 'article')}</title>
     <style>
-      body {
-        margin: 0;
-        background: #f5f0e8;
-        color: #211913;
-        font-family: Georgia, "Songti SC", "STSong", serif;
-      }
-      main {
-        width: min(860px, calc(100vw - 32px));
-        margin: 24px auto 48px;
-        padding: 32px;
-        background: #fffdf9;
-        border: 1px solid rgba(33, 25, 19, 0.08);
-        border-radius: 28px;
-        box-shadow: 0 24px 80px rgba(66, 36, 14, 0.08);
-      }
+      body { margin: 0; background: #f5f0e8; color: #211913; font-family: Georgia, "Songti SC", "STSong", serif; }
+      main { width: min(860px, calc(100vw - 32px)); margin: 24px auto 48px; padding: 32px; background: #fffdf9; border: 1px solid rgba(33, 25, 19, 0.08); border-radius: 28px; box-shadow: 0 24px 80px rgba(66, 36, 14, 0.08); }
       h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
       p, li { line-height: 1.85; font-size: 17px; }
       ul, ol { padding-left: 24px; }
       a { color: #0d6d64; }
-      code {
-        padding: 2px 6px;
-        border-radius: 999px;
-        background: #f2ece4;
-      }
-      img {
-        max-width: 100%;
-        border-radius: 16px;
-        margin: 14px 0;
-        display: block;
-      }
+      code { padding: 2px 6px; border-radius: 999px; background: #f2ece4; }
+      img { max-width: 100%; border-radius: 16px; margin: 14px 0; display: block; }
       strong { color: #ad431d; }
     </style>
   </head>
@@ -368,9 +372,73 @@ const copyPolished = async () => {
   setStatus('成稿 Markdown 已复制到剪贴板。', 'success');
 };
 
+const getSettingsFromForm = () => ({
+  apiBase: $('#setting-api-base').value.trim(),
+  llmBaseUrl: $('#setting-llm-base-url').value.trim(),
+  llmModel: $('#setting-llm-model').value.trim(),
+  llmSystemPrompt: $('#setting-llm-system-prompt').value.trim(),
+  imageUploadUrl: $('#setting-image-upload-url').value.trim(),
+  imageMethod: $('#setting-image-method').value.trim() || 'POST',
+  imageField: $('#setting-image-field').value.trim() || 'file',
+  imageResponsePath: $('#setting-image-response-path').value.trim(),
+  imageUrlPrefix: $('#setting-image-url-prefix').value.trim(),
+  imageHeaders: $('#setting-image-headers').value.trim() || '{}',
+  imageFormFields: $('#setting-image-form-fields').value.trim() || '{}',
+});
+
+const fillSettingsForm = (settings) => {
+  $('#setting-api-base').value = settings.apiBase || '';
+  $('#setting-llm-base-url').value = settings.llmBaseUrl || '';
+  $('#setting-llm-model').value = settings.llmModel || '';
+  $('#setting-llm-system-prompt').value = settings.llmSystemPrompt || '';
+  $('#setting-image-upload-url').value = settings.imageUploadUrl || '';
+  $('#setting-image-method').value = settings.imageMethod || 'POST';
+  $('#setting-image-field').value = settings.imageField || 'file';
+  $('#setting-image-response-path').value = settings.imageResponsePath || '0.src';
+  $('#setting-image-url-prefix').value = settings.imageUrlPrefix || '';
+  $('#setting-image-headers').value = settings.imageHeaders || '{}';
+  $('#setting-image-form-fields').value = settings.imageFormFields || '{}';
+};
+
+const saveSettings = () => {
+  const settings = getSettingsFromForm();
+  JSON.parse(settings.imageHeaders || '{}');
+  JSON.parse(settings.imageFormFields || '{}');
+  state.settings = { ...defaultSettings, ...settings };
+  window.localStorage.setItem(settingsKey, JSON.stringify(state.settings));
+  setApiNote();
+  setStatus('前端配置已保存到当前浏览器。', 'success');
+};
+
+const resetSettings = () => {
+  state.settings = { ...defaultSettings };
+  window.localStorage.removeItem(settingsKey);
+  fillSettingsForm(state.settings);
+  setApiNote();
+  setStatus('前端配置已恢复默认。', 'success');
+};
+
+const buildRuntimeConfig = () => ({
+  llm: {
+    baseUrl: state.settings.llmBaseUrl,
+    model: state.settings.llmModel,
+    systemPrompt: state.settings.llmSystemPrompt,
+  },
+  imageHost: {
+    uploadUrl: state.settings.imageUploadUrl,
+    method: state.settings.imageMethod,
+    fileField: state.settings.imageField,
+    headers: state.settings.imageHeaders,
+    formFields: state.settings.imageFormFields,
+    responseUrlPath: state.settings.imageResponsePath,
+    urlPrefix: state.settings.imageUrlPrefix,
+  },
+});
+
 const runProcess = async () => {
   const url = normalizeUrl($('#url-input').value);
   const prompt = $('#prompt-input').value.trim() || defaultPrompt;
+  const apiBase = getApiBase();
   if (!url) throw new Error('请先输入公众号文章链接。');
   if (!apiBase) throw new Error('当前页面没有可用 API 地址。');
 
@@ -378,7 +446,7 @@ const runProcess = async () => {
   const payload = await fetchJson(`${apiBase}/api/process`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ url, prompt }),
+    body: JSON.stringify({ url, prompt, runtimeConfig: buildRuntimeConfig() }),
   });
   if (!payload.ok || !payload.data) {
     throw new Error(payload.error || '处理失败。');
@@ -417,6 +485,16 @@ const bindEvents = () => {
   $('#download-html').addEventListener('click', () => {
     triggerDownload(state.htmlBlobUrl, 'article.html');
   });
+  $('#save-settings').addEventListener('click', () => {
+    try {
+      saveSettings();
+    } catch (error) {
+      setStatus(`前端配置保存失败：${error.message || String(error)}`, 'error');
+    }
+  });
+  $('#reset-settings').addEventListener('click', () => {
+    resetSettings();
+  });
 };
 
 const initFromSearch = async () => {
@@ -425,8 +503,10 @@ const initFromSearch = async () => {
   $('#url-input').value = url;
 };
 
+state.settings = readSettings();
 state.history = readHistory();
 bindEvents();
+fillSettingsForm(state.settings);
 setApiNote();
 renderImages();
 renderHistory();

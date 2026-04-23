@@ -20,6 +20,32 @@ function parseBody(req) {
   return req.body || {};
 }
 
+function pickRuntimeConfig(body) {
+  const runtime = body.runtimeConfig && typeof body.runtimeConfig === 'object' ? body.runtimeConfig : {};
+  return {
+    llm: runtime.llm && typeof runtime.llm === 'object'
+      ? {
+          baseUrl: runtime.llm.baseUrl || '',
+          model: runtime.llm.model || '',
+          systemPrompt: runtime.llm.systemPrompt || '',
+        }
+      : {},
+    imageHost: runtime.imageHost && typeof runtime.imageHost === 'object'
+      ? {
+          uploadUrl: runtime.imageHost.uploadUrl || '',
+          method: runtime.imageHost.method || '',
+          fileField: runtime.imageHost.fileField || '',
+          headers: runtime.imageHost.headers ?? null,
+          formFields: runtime.imageHost.formFields ?? null,
+          responseUrlPath: runtime.imageHost.responseUrlPath || '',
+          urlPrefix: runtime.imageHost.urlPrefix || '',
+          successPath: runtime.imageHost.successPath || '',
+          successValue: runtime.imageHost.successValue || '',
+        }
+      : {},
+  };
+}
+
 export default async function handler(req, res) {
   setCors(res);
 
@@ -45,6 +71,7 @@ export default async function handler(req, res) {
       prompt: String(body.prompt || DEFAULT_POLISH_PROMPT).trim() || DEFAULT_POLISH_PROMPT,
       skipUpload: Boolean(body.skipUpload),
       skipPolish: Boolean(body.skipPolish),
+      runtimeConfig: pickRuntimeConfig(body),
     });
 
     res.status(200).end(

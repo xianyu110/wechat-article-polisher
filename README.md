@@ -180,6 +180,28 @@ node ./scripts/process-wechat.js "https://mp.weixin.qq.com/s/xxx" \
 - 润色后的最终 Markdown
 - 图片上传结果和警告信息
 
+## 前端可配置项
+
+在线页面现在支持“前端配置”面板，配置会保存在当前浏览器的 `localStorage`，并在请求时一起发给后端。
+
+适合放前端配置的公开参数：
+
+- `API 地址`
+- `LLM Base URL`
+- `LLM Model`
+- `LLM System Prompt`
+- 图床上传地址 / Method / 文件字段
+- 图床响应 JSON 路径
+- 图床 URL 前缀
+- 图床 Headers JSON / Form Fields JSON（仅限公开字段）
+
+不要放前端配置的敏感参数：
+
+- `LLM_API_KEY`
+- 任何私密 Token / Secret / Bearer Key
+
+这些敏感值仍然必须配置在 Vercel 服务端环境变量里。
+
 因此网页端可以直接：
 
 - 展示最终成稿
